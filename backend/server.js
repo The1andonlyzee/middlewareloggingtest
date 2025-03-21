@@ -10,7 +10,7 @@ require("dotenv").config();
 const app = express();
 
 const corsOptions = {
-    origin: "http://localhost:5173",  // Hanya izinkan frontend di localhost:5173
+    origin: "*",  // Hanya izinkan frontend di localhost:5173
     methods: "GET,POST",  // Metode yang diizinkan
     allowedHeaders: "Content-Type",  // Header yang diizinkan
 };
@@ -33,7 +33,9 @@ app.use((req, res, next) => {
 
 // Middleware Redirect HTTP ke HTTPS
 app.use((req, res, next) => {
-    if (req.secure) return next();
+    if (req.headers["x-forwarded-proto"] === "https" || req.secure) {
+        return next();
+    }
     res.redirect(`https://${req.headers.host}${req.url}`);
 });
 
@@ -54,15 +56,21 @@ app.post("/api/login", (req, res) => {
 const httpPort = process.env.HTTP_PORT || 3000;
 const httpsPort = process.env.HTTPS_PORT || 3443;
 
+//const sslOptions = {
+//    key: fs.readFileSync(process.env.SSL_KEY_PATH),
+//   cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+//};
+
+console.log(__dirname);
 const sslOptions = {
-    key: fs.readFileSync(process.env.SSL_KEY_PATH),
-    cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+    key: fs.readFileSync("./keys/key.pem"),
+    cert: fs.readFileSync("./keys/cert.pem"),
 };
 
-http.createServer(app).listen(httpPort, () => {
+http.createServer(app).listen(httpPort, "0.0.0.0", () => {
     console.log(`HTTP Server running on port ${httpPort}`);
 });
 
-https.createServer(sslOptions, app).listen(httpsPort, () => {
+https.createServer(sslOptions, app).listen(httpsPort, "0.0.0.0", () => {
     console.log(`HTTPS Server running on port ${httpsPort}`);
 });
